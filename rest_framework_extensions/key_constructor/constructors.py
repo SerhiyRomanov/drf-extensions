@@ -28,7 +28,7 @@ class KeyConstructor:
     def __call__(self, **kwargs):
         return self.get_key(**kwargs)
 
-    def get_key(self, view_instance, view_method, request, args, kwargs):
+    def get_key(self, view_instance=None, view_method=None, request=None, args=None, kwargs=None):
         if self.memoize_for_request:
             memoization_key = self._get_memoization_key(
                 view_instance=view_instance,
@@ -89,6 +89,15 @@ class KeyConstructor:
             result_dict[bit_name] = bit_instance.get_data(
                 params=params, **kwargs)
         return result_dict
+
+
+class StringKeyConstructor(KeyConstructor):
+    """
+    The same as KeyConstructor but return key as string
+    """
+    def prepare_key(self, key_dict: dict) -> str:
+        result = ":".join(v for k, v in sorted(key_dict.items()))
+        return result
 
 
 class DefaultKeyConstructor(KeyConstructor):
