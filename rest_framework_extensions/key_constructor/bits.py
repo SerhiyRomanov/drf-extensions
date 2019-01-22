@@ -6,8 +6,6 @@ from django.utils.encoding import force_text
 
 from rest_framework_extensions import compat
 
-ANY_VALUE = '*'
-
 
 class AllArgsMixin(object):
 
@@ -91,7 +89,6 @@ class LanguageKeyBit(KeyBitBase):
     """
 
     def get_data(self, params, view_instance, view_method, request, args, kwargs):
-        # TODO: Can it depend on request and return ANY_VALUE if request is None???
         return force_text(get_language())
 
 
@@ -105,7 +102,7 @@ class FormatKeyBit(KeyBitBase):
     """
 
     def get_data(self, params, view_instance, view_method, request, args, kwargs):
-        return force_text(request.accepted_renderer.format) if request else ANY_VALUE
+        return force_text(request.accepted_renderer.format)
 
 
 class UserKeyBit(KeyBitBase):
@@ -184,34 +181,6 @@ class PaginationKeyBit(QueryParamsKeyBit):
                 kwargs['params'].append(
                     kwargs['view_instance'].paginator.page_size_query_param)
         return super(PaginationKeyBit, self).get_data(**kwargs)
-
-
-class ModelNameKeyBit(KeyBitBase):
-    """
-    Return module and model name, like 'app_name.models.ModelName
-
-    params['model_class'] used to pass model class from outside (not only from viewsets).
-    It can be useful for invalidating cache for needed model by signals
-    """
-    def get_data(self, params, view_instance, view_method, request, args, kwargs):
-        bit_pieces = None
-        model_class = None
-
-        if params:
-            model_class = params.get('class', None)
-
-        if model_class:
-            bit_pieces = (
-                model_class.__module__,
-                model_class.__name__
-            )
-        elif view_instance:
-            bit_pieces = (
-                view_instance.get_queryset().model.__module__,
-                view_instance.get_queryset().model.__name__,
-            )
-
-        return ".".join(bit_pieces) if bit_pieces else ANY_VALUE
 
 
 class SqlQueryKeyBitBase(KeyBitBase):
