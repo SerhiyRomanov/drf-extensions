@@ -93,11 +93,10 @@ class KeyConstructor:
 
 class StringKeyConstructor(KeyConstructor):
     """
-    The same as KeyConstructor but return key as string
+    The same as KeyConstructor but return key as raw string separated by colon instead of hashing it
     """
     def prepare_key(self, key_dict: dict) -> str:
-        result = ":".join(v for k, v in sorted(key_dict.items()))
-        return result
+        return ":".join(str(v) for k, v in sorted(key_dict.items()))
 
 
 class DefaultKeyConstructor(KeyConstructor):

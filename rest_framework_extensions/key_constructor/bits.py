@@ -1,16 +1,13 @@
-from django.utils.translation import get_language
 from django.db.models.query import EmptyQuerySet
 from django.db.models.sql.datastructures import EmptyResultSet
-
 from django.utils.encoding import force_text
+from django.utils.translation import get_language
 
 from rest_framework_extensions import compat
-
-ANY_VALUE = '*'
+from rest_framework_extensions.settings import extensions_api_settings as ext_api_settings
 
 
 class AllArgsMixin(object):
-
     def __init__(self, params='*'):
         super(AllArgsMixin, self).__init__(params)
 
@@ -19,18 +16,14 @@ class KeyBitBase(object):
     def __init__(self, params=None):
         self.params = params
 
-    def get_data(self, params, view_instance, view_method, request, args, kwargs):
-        """
-        @rtype: dict
-        """
+    def get_data(self, params, view_instance, view_method, request, args, kwargs) -> dict:
         raise NotImplementedError()
 
 
 class KeyBitDictBase(KeyBitBase):
-    """Base class for dict-like source data processing.
-
+    """
+    Base class for dict-like source data processing.
     Look at HeadersKeyBit and QueryParamsKeyBit
-
     """
 
     def get_data(self, params, view_instance, view_method, request, args, kwargs):
@@ -71,11 +64,14 @@ class UniqueViewIdKeyBit(KeyBitBase):
         return u'.'.join([
             view_instance.__module__,
             view_instance.__class__.__name__
-        ])
+        ]) if view_instance is not None else ext_api_settings.DEFAULT_CACHE_ANY_VALUE
 
 
 class UniqueMethodIdKeyBit(KeyBitBase):
     def get_data(self, params, view_instance, view_method, request, args, kwargs):
+        if view_instance is None or view_method is None:
+            return ext_api_settings.DEFAULT_CACHE_ANY_VALUE
+
         return u'.'.join([
             view_instance.__module__,
             view_instance.__class__.__name__,
@@ -87,7 +83,6 @@ class LanguageKeyBit(KeyBitBase):
     """
     Return example:
         u'en'
-
     """
 
     def get_data(self, params, view_instance, view_method, request, args, kwargs):
@@ -105,7 +100,7 @@ class FormatKeyBit(KeyBitBase):
     """
 
     def get_data(self, params, view_instance, view_method, request, args, kwargs):
-        return force_text(request.accepted_renderer.format) if request else ANY_VALUE
+        return force_text(request.accepted_renderer.format) if request else ext_api_settings.DEFAULT_CACHE_ANY_VALUE
 
 
 class UserKeyBit(KeyBitBase):
@@ -118,13 +113,15 @@ class UserKeyBit(KeyBitBase):
     """
 
     def get_data(self, params, view_instance, view_method, request, args, kwargs):
+        if request is None:
+            return ext_api_settings.DEFAULT_CACHE_ANY_VALUE
         if hasattr(request, 'user') and request.user and request.user.is_authenticated:
-            return force_text(self._get_id_from_user(request.user))
+            return force_text(self.get_id_from_user(request.user))
         else:
             return u'anonymous'
 
-    def _get_id_from_user(self, user):
-        return user.id
+    def get_id_from_user(self, user):
+        return user.pk
 
 
 class HeadersKeyBit(KeyBitDictBase):
@@ -211,7 +208,7 @@ class ModelNameKeyBit(KeyBitBase):
                 view_instance.get_queryset().model.__name__,
             )
 
-        return ".".join(bit_pieces) if bit_pieces else ANY_VALUE
+        return ".".join(bit_pieces) if bit_pieces else ext_api_settings.DEFAULT_CACHE_ANY_VALUE
 
 
 class SqlQueryKeyBitBase(KeyBitBase):

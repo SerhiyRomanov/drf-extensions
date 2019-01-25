@@ -7,6 +7,7 @@ from django.utils.translation import override
 from rest_framework import views
 from rest_framework.response import Response
 from rest_framework_extensions.test import APIRequestFactory
+from rest_framework_extensions.settings import extensions_api_settings as ext_api_settings
 
 from rest_framework_extensions.key_constructor.bits import (
     KeyBitDictBase,
@@ -25,6 +26,7 @@ from rest_framework_extensions.key_constructor.bits import (
     RetrieveModelKeyBit,
     ArgsKeyBit,
     KwargsKeyBit,
+    ModelNameKeyBit
 )
 
 from .models import BitTestModel
@@ -162,15 +164,21 @@ class KeyBitDictBaseTest(TestCase):
         response_2 = KeyBitDictChild().get_data(**self.kwargs)
         self.assertEqual(response_1, response_2)
 
+    def test_should_return_any_value(self):
+        self.kwargs['params'] = None
+        response = ModelNameKeyBit().get_data(**self.kwargs)
+        self.assertEqual(response, ext_api_settings.DEFAULT_CACHE_ANY_VALUE)
+
 
 class UniqueViewIdKeyBitTest(TestCase):
-    def test_resulting_dict(self):
+    def setUp(self):
+
         class TestView(views.APIView):
             def get(self, request, *args, **kwargs):
                 return Response('Response from method')
 
         view_instance = TestView()
-        kwargs = {
+        self.kwargs = {
             'params': None,
             'view_instance': view_instance,
             'view_method': view_instance.get,
@@ -178,18 +186,26 @@ class UniqueViewIdKeyBitTest(TestCase):
             'args': None,
             'kwargs': None
         }
+
+    def test_resulting_dict(self):
         expected = u'tests_app.tests.unit.key_constructor.bits.tests' + u'.' + u'TestView'
-        self.assertEqual(UniqueViewIdKeyBit().get_data(**kwargs), expected)
+        self.assertEqual(UniqueViewIdKeyBit().get_data(**self.kwargs), expected)
+
+    def test_should_return_any_value(self):
+        self.kwargs['view_instance'] = None
+        response = UniqueViewIdKeyBit().get_data(**self.kwargs)
+        self.assertEqual(response, ext_api_settings.DEFAULT_CACHE_ANY_VALUE)
 
 
 class UniqueMethodIdKeyBitTest(TestCase):
-    def test_resulting_dict(self):
+    def setUp(self):
+
         class TestView(views.APIView):
             def get(self, request, *args, **kwargs):
                 return Response('Response from method')
 
         view_instance = TestView()
-        kwargs = {
+        self.kwargs = {
             'params': None,
             'view_instance': view_instance,
             'view_method': view_instance.get,
@@ -197,8 +213,15 @@ class UniqueMethodIdKeyBitTest(TestCase):
             'args': None,
             'kwargs': None
         }
+
+    def test_resulting_dict(self):
         expected = u'tests_app.tests.unit.key_constructor.bits.tests' + u'.' + u'TestView' + u'.' + u'get'
-        self.assertEqual(UniqueMethodIdKeyBit().get_data(**kwargs), expected)
+        self.assertEqual(UniqueMethodIdKeyBit().get_data(**self.kwargs), expected)
+
+    def test_should_return_any_value(self):
+        self.kwargs['view_method'] = None
+        response = UniqueMethodIdKeyBit().get_data(**self.kwargs)
+        self.assertEqual(response, ext_api_settings.DEFAULT_CACHE_ANY_VALUE)
 
 
 class LanguageKeyBitTest(TestCase):
@@ -218,8 +241,8 @@ class LanguageKeyBitTest(TestCase):
 
 
 class FormatKeyBitTest(TestCase):
-    def test_resulting_dict(self):
-        kwargs = {
+    def setUp(self):
+        self.kwargs = {
             'params': None,
             'view_instance': None,
             'view_method': None,
@@ -227,9 +250,15 @@ class FormatKeyBitTest(TestCase):
             'args': None,
             'kwargs': None
         }
-        kwargs['request'].accepted_renderer = Mock(format='super-format')
+
+    def test_resulting_dict(self):
+        self.kwargs['request'].accepted_renderer = Mock(format='super-format')
         expected = u'super-format'
-        self.assertEqual(FormatKeyBit().get_data(**kwargs), expected)
+        self.assertEqual(FormatKeyBit().get_data(**self.kwargs), expected)
+
+    def test_should_return_any_value(self):
+        self.kwargs['request'] = None
+        self.assertEqual(FormatKeyBit().get_data(**self.kwargs), ext_api_settings.DEFAULT_CACHE_ANY_VALUE)
 
 
 class UserKeyBitTest(TestCase):
@@ -244,6 +273,7 @@ class UserKeyBitTest(TestCase):
         }
         self.user = Mock()
         self.user.id = 123
+        self.user.pk = 123
         self.is_authenticated = PropertyMock(return_value=False)
         type(self.user).is_authenticated = self.is_authenticated
 
@@ -259,12 +289,16 @@ class UserKeyBitTest(TestCase):
     def test_with_autenticated_user(self):
         self.kwargs['request'].user = self.user
         self.is_authenticated.return_value = True
-        expected = u'123'
+        expected = '123'
         self.assertEqual(UserKeyBit().get_data(**self.kwargs), expected)
+
+    def test_should_return_any_value(self):
+        self.kwargs['request'] = None
+        self.assertEqual(UserKeyBit().get_data(**self.kwargs), ext_api_settings.DEFAULT_CACHE_ANY_VALUE)
 
 
 class HeadersKeyBitTest(TestCase):
-    def test_resulting_dict(self):
+    def setUp(self):
         self.kwargs = {
             'params': ['Accept-Language', 'X-Geobase-Id', 'Not-Existing-Header'],
             'view_instance': None,
@@ -276,6 +310,8 @@ class HeadersKeyBitTest(TestCase):
             'args': None,
             'kwargs': None
         }
+
+    def test_resulting_dict(self):
         expected = {
             'accept-language': u'Ru',
             'x-geobase-id': u'123'
@@ -374,6 +410,40 @@ class PaginationKeyBitTest(TestCase):
         self.kwargs['view_instance'].paginator.page_size_query_param = 'page_size'
         self.kwargs['request'] = factory.get('')
         self.assertEqual(PaginationKeyBit().get_data(**self.kwargs), {})
+
+
+class ModelNameKeyBitTest(TestCase):
+    def setUp(self):
+        self.kwargs = {
+            'params': None,
+            'view_instance': Mock(),
+            'view_method': None,
+            'request': None,
+            'args': None,
+            'kwargs': None
+        }
+        self.kwargs['view_instance'].kwargs = {'id': 123}
+        self.kwargs['view_instance'].lookup_field = 'id'
+        self.kwargs['view_instance'].get_queryset = Mock(return_value=BitTestModel.objects.all())
+        self.kwargs['view_instance'].filter_queryset = lambda x: x.filter(is_active=True)
+
+    def test_should_use_view_instance(self):
+        response = ModelNameKeyBit().get_data(**self.kwargs)
+        expected = "tests_app.tests.unit.key_constructor.bits.models.BitTestModel"
+        self.assertEqual(response, expected)
+
+    def test_should_use_params(self):
+        self.kwargs['view_instance'] = None
+        self.kwargs['params'] = {'class': BitTestModel}
+        response = ModelNameKeyBit().get_data(**self.kwargs)
+        expected = "tests_app.tests.unit.key_constructor.bits.models.BitTestModel"
+        self.assertEqual(response, expected)
+
+    def test_should_return_any_value(self):
+        self.kwargs['view_instance'] = None
+        self.kwargs['params'] = None
+        response = ModelNameKeyBit().get_data(**self.kwargs)
+        self.assertEqual(response, ext_api_settings.DEFAULT_CACHE_ANY_VALUE)
 
 
 class ListSqlQueryKeyBitTest(TestCase):
