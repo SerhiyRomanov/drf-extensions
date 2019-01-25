@@ -91,7 +91,7 @@ class KeyConstructor:
         return result_dict
 
 
-class StringKeyConstructor(KeyConstructor):
+class StructuredKeyConstructor(KeyConstructor):
     """
     The same as KeyConstructor but return key as raw string separated by colon instead of hashing it
     """
