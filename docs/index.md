@@ -168,14 +168,14 @@ For example:
 
     router = ExtendedSimpleRouter()
     (
-        router.register(r'users', UserViewSet, base_name='user')
+        router.register(r'users', UserViewSet, basename='user')
               .register(r'groups',
                         GroupViewSet,
-                        base_name='users-group',
+                        basename='users-group',
                         parents_query_lookups=['user_groups'])
               .register(r'permissions',
                         PermissionViewSet,
-                        base_name='users-groups-permission',
+                        basename='users-groups-permission',
                         parents_query_lookups=['group__user', 'group'])
     )
     urlpatterns = router.urls
@@ -245,18 +245,18 @@ Example with registering more then one nested resource in one depth:
     permissions_routes = router.register(
         r'permissions',
         PermissionViewSet,
-        base_name='permission'
+        basename='permission'
     )
     permissions_routes.register(
         r'groups',
         GroupViewSet,
-        base_name='permissions-group',
+        basename='permissions-group',
         parents_query_lookups=['permissions']
     )
     permissions_routes.register(
         r'users',
         UserViewSet,
-        base_name='permissions-user',
+        basename='permissions-user',
         parents_query_lookups=['groups__permissions']
     )
 
@@ -2204,12 +2204,19 @@ If you need to access the values of DRF-extensions API settings in your project,
 ### Release notes
 
 You can read about versioning, deprecation policy and upgrading from
-[Django REST framework documentation](http://django-rest-framework.org/topics/release-notes).
+[Django REST framework documentation](https://www.django-rest-framework.org/community/release-notes/).
 
 
-#### Development version
+#### 0.5.0
 
+* Maay 10, 2019 *
+
+* Dropped python 2.7 and 3.4
+* Fix possible header mutation issue 
 * Added ability to [use a specific cache timeouts](#cacheresponsemixin) for `CacheResponseMixin`
+* Test against Django 2.1, DRF 3.9 and django-filter 2.0.0
+* Dropped support of older DRF version lower than 3.9
+* Django 2.2 support added
 
 
 #### 0.4.0
